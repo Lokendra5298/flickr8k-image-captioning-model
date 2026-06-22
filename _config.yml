@@ -1,0 +1,4 @@
+title: Flickr8k Image Captioning
+description: Building an image captioning model from scratch using PyTorch
+theme: minima
+markdown: kramdown
