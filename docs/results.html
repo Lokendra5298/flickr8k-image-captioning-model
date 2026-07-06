@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Results - Flickr8k Image Captioning</title>
+  <meta name="description" content="Training, validation, and test results for the Flickr8k CNN-LSTM image captioning model.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="index.html">Home</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="training.html">Training</a>
+      <a class="active" href="results.html">Results</a>
+      <a href="predict.html">Prediction</a>
+      <a href="https://github.com/Lokendra5298/flickr8k-image-captioning-model" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </nav>
+
+  <main class="page">
+    <section class="card">
+      <h1>Results and Training Curves</h1>
+      <p class="lead">
+        This page explains what happened during training and how to read the loss and accuracy curves.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Final logged performance</h2>
+      <p>
+        The training log contains 30 epochs with train, validation, and test loss and token accuracy. The final epoch shows:
+      </p>
+      <table class="metric-table">
+        <tr>
+          <th>Split</th>
+          <th>Loss at epoch 30</th>
+          <th>Token accuracy at epoch 30</th>
+          <th>Meaning</th>
+        </tr>
+        <tr>
+          <td><strong>Train</strong></td>
+          <td>1.8039</td>
+          <td>53.40%</td>
+          <td>The model keeps improving on training captions.</td>
+        </tr>
+        <tr>
+          <td><strong>Validation</strong></td>
+          <td>2.8361</td>
+          <td>40.41%</td>
+          <td>Generalization has mostly stopped improving by later epochs.</td>
+        </tr>
+        <tr>
+          <td><strong>Test</strong></td>
+          <td>2.8036</td>
+          <td>40.70%</td>
+          <td>Held-out token accuracy is close to validation accuracy.</td>
+        </tr>
+      </table>
+      <div class="callout">
+        <strong>Best checkpoint idea:</strong> the lowest validation loss appears around epoch 17, while the highest validation token accuracy appears around epoch 16. For final deployment, saving the best validation checkpoint is usually better than always using the last epoch.
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Loss curve</h2>
+      <img class="figure" src="assets/images/loss_curve.png" alt="Training validation and test loss curve">
+      <p class="caption">Lower loss is better. The training loss keeps decreasing, while validation and test loss flatten and then slowly rise.</p>
+      <h3>How to interpret this graph</h3>
+      <ul>
+        <li><strong>Training loss decreases steadily:</strong> the model is learning the training captions.</li>
+        <li><strong>Validation/test loss improve early:</strong> the model learns useful patterns in the first part of training.</li>
+        <li><strong>Validation/test loss rise later:</strong> this suggests overfitting. The model is becoming better on training data but not better on unseen data.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Accuracy curve</h2>
+      <img class="figure" src="assets/images/accuracy_curve.png" alt="Training validation and test token accuracy curve">
+      <p class="caption">Higher token accuracy is better. Training accuracy continues rising, while validation and test accuracy stay near 40-41%.</p>
+      <h3>How to interpret this graph</h3>
+      <ul>
+        <li><strong>Training accuracy rises to about 53%:</strong> the model is increasingly fitting training captions.</li>
+        <li><strong>Validation/test accuracy plateau:</strong> the model reaches a generalization limit with the current setup.</li>
+        <li><strong>The gap matters:</strong> train accuracy is much higher than validation/test accuracy, which again indicates overfitting.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Why token accuracy is not the full story</h2>
+      <p>
+        Token accuracy checks whether the exact next word is correct. But image captions can have many correct versions.
+      </p>
+      <div class="grid">
+        <div class="box good">
+          <h3>Reference caption</h3>
+          <p><code>a man is standing in the snow</code></p>
+        </div>
+        <div class="box good">
+          <h3>Also reasonable</h3>
+          <p><code>a person stands on a snowy mountain</code></p>
+        </div>
+      </div>
+      <p>
+        These captions can describe the same image, but token accuracy may punish the second one because the words are not exactly the same.
+        That is why captioning papers usually report sentence-level metrics such as BLEU, METEOR, ROUGE, CIDEr, and SPICE.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>What is good about the current result?</h2>
+      <div class="grid">
+        <div class="box blue">
+          <h3>End-to-end pipeline works</h3>
+          <p>The project downloads data, builds vocabulary, trains the model, saves checkpoints, logs metrics, plots curves, and predicts captions.</p>
+        </div>
+        <div class="box green">
+          <h3>Good educational baseline</h3>
+          <p>The CNN-LSTM design is easy to understand and is a strong first model for learning image captioning.</p>
+        </div>
+        <div class="box purple">
+          <h3>Pretrained visual features</h3>
+          <p>Using ResNet18 features gives the decoder a useful visual signal without training a CNN from scratch.</p>
+        </div>
+        <div class="box orange">
+          <h3>Clear next improvement path</h3>
+          <p>The curves clearly show where to improve: reduce overfitting and improve caption-level evaluation.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Limitations</h2>
+      <table class="metric-table">
+        <tr>
+          <th>Limitation</th>
+          <th>Why it matters</th>
+          <th>Improvement</th>
+        </tr>
+        <tr>
+          <td>Frozen ResNet18</td>
+          <td>The encoder cannot adapt deeply to Flickr8k.</td>
+          <td>Unfreeze later layers with a small learning rate.</td>
+        </tr>
+        <tr>
+          <td>No attention mechanism</td>
+          <td>The decoder receives one global image vector only.</td>
+          <td>Add visual attention so each word can focus on image regions.</td>
+        </tr>
+        <tr>
+          <td>Greedy decoding</td>
+          <td>Always choosing the top word can produce short or generic captions.</td>
+          <td>Use beam search with length normalization.</td>
+        </tr>
+        <tr>
+          <td>Token accuracy only</td>
+          <td>Does not fully measure caption quality.</td>
+          <td>Add BLEU, METEOR, ROUGE, CIDEr, and qualitative examples.</td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Conclusion</h2>
+      <p>
+        The model is a clean and working image captioning baseline. It successfully connects a CNN image encoder with an LSTM language decoder.
+        The training curves show that the model learns, but also that generalization plateaus early. This makes the project excellent for a learning blog,
+        and it gives a clear foundation for stronger captioning systems.
+      </p>
+      <p style="text-align: center; margin-top: 28px;">
+        <a class="button-link" href="predict.html">Next: generate captions</a>
+      </p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <p><strong>Flickr8k Image Captioning Model</strong> - results explained clearly.</p>
+      <p><a href="https://github.com/Lokendra5298/flickr8k-image-captioning-model/blob/main/logs/training_log.csv" target="_blank" rel="noopener noreferrer">View training log on GitHub</a></p>
+    </div>
+  </footer>
+</body>
+</html>

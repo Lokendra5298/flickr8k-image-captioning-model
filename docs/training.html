@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Training Guide - Flickr8k Image Captioning</title>
+  <meta name="description" content="Step-by-step training guide for the Flickr8k CNN-LSTM image captioning model.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="index.html">Home</a>
+      <a href="architecture.html">Architecture</a>
+      <a class="active" href="training.html">Training</a>
+      <a href="results.html">Results</a>
+      <a href="predict.html">Prediction</a>
+      <a href="https://github.com/Lokendra5298/flickr8k-image-captioning-model" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </nav>
+
+  <main class="page">
+    <section class="card">
+      <h1>Training Guide</h1>
+      <p class="lead">
+        This page explains the full training pipeline in easy words: dataset, preprocessing, vocabulary, model training, checkpoint saving, and metric plotting.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Step 1: Install the project</h2>
+      <pre><code>git clone https://github.com/Lokendra5298/flickr8k-image-captioning-model.git
+cd flickr8k-image-captioning-model
+pip install -r requirements.txt</code></pre>
+      <p>
+        Recommended packages include Python, PyTorch, torchvision, numpy, pandas, and matplotlib.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Step 2: Download the Flickr8k dataset</h2>
+      <p>Run the dataset download script:</p>
+      <pre><code>python src/download_dataset.py</code></pre>
+      <p>After download, your dataset should look like this:</p>
+      <pre><code>data/flickr8k/flickr8k/
+├── Images/
+└── captions.txt</code></pre>
+      <p>Verify the files:</p>
+      <pre><code>find data/flickr8k -type f -name "*.jpg" | head
+find data/flickr8k -type f -name "captions.txt"</code></pre>
+    </section>
+
+    <section class="card">
+      <h2>Step 3: Dataset path configuration</h2>
+      <p>
+        By default, the code searches inside <code>data/flickr8k</code>. If your dataset is somewhere else, set the environment variable:
+      </p>
+      <pre><code>export FLICKR8K_DIR=/path/to/your/flickr8k</code></pre>
+      <div class="callout">
+        <strong>Example:</strong> if your dataset folder contains <code>flickr8k/Images</code> and <code>flickr8k/captions.txt</code>, then set <code>FLICKR8K_DIR</code> to the parent folder that contains that <code>flickr8k</code> directory.
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Step 4: What preprocessing does</h2>
+      <p>
+        Training an image captioning model needs both image preprocessing and text preprocessing.
+      </p>
+      <div class="grid">
+        <div class="box blue">
+          <h3>Image preprocessing</h3>
+          <ul>
+            <li>Load image from <code>Images/</code>.</li>
+            <li>Resize or crop to <code>224 x 224</code>.</li>
+            <li>Convert to tensor shape <code>3 x 224 x 224</code>.</li>
+            <li>Normalize so the pretrained ResNet18 receives expected input values.</li>
+          </ul>
+        </div>
+        <div class="box purple">
+          <h3>Text preprocessing</h3>
+          <ul>
+            <li>Read captions from <code>captions.txt</code>.</li>
+            <li>Lowercase and tokenize words.</li>
+            <li>Build a vocabulary: word to ID and ID to word.</li>
+            <li>Add special tokens such as <code>&lt;start&gt;</code>, <code>&lt;end&gt;</code>, <code>&lt;pad&gt;</code>, and possibly <code>&lt;unk&gt;</code>.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Step 5: How one training example works</h2>
+      <p>
+        Suppose the image shows a person standing in snow and the target caption is:
+      </p>
+      <pre><code>&lt;start&gt; a man is standing in the snow &lt;end&gt;</code></pre>
+      <p>
+        The model receives the image and the caption tokens. It learns to predict the next word at every position:
+      </p>
+      <table class="metric-table">
+        <tr>
+          <th>Input so far</th>
+          <th>Target next word</th>
+        </tr>
+        <tr>
+          <td><code>&lt;start&gt;</code></td>
+          <td><code>a</code></td>
+        </tr>
+        <tr>
+          <td><code>&lt;start&gt; a</code></td>
+          <td><code>man</code></td>
+        </tr>
+        <tr>
+          <td><code>&lt;start&gt; a man</code></td>
+          <td><code>is</code></td>
+        </tr>
+        <tr>
+          <td><code>&lt;start&gt; a man is standing in the snow</code></td>
+          <td><code>&lt;end&gt;</code></td>
+        </tr>
+      </table>
+      <p>
+        This is why training is a next-word prediction problem guided by image features.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Step 6: Start training</h2>
+      <pre><code>python src/train.py</code></pre>
+      <p>
+        During training, the model repeatedly sees batches of images and captions, predicts next-word scores, computes loss, and updates trainable parameters.
+      </p>
+      <div class="pipeline">
+        <div>Batch of images</div>
+        <span>+</span>
+        <div>Batch of captions</div>
+        <span>--&gt;</span>
+        <div>Forward pass</div>
+        <span>--&gt;</span>
+        <div>Loss</div>
+        <span>--&gt;</span>
+        <div>Backpropagation</div>
+        <span>--&gt;</span>
+        <div>Updated model</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Important training concepts</h2>
+      <div class="grid">
+        <div class="box">
+          <h3>Cross-entropy loss</h3>
+          <p>
+            This loss compares the predicted vocabulary distribution with the correct next word. Lower loss means better next-word prediction.
+          </p>
+        </div>
+        <div class="box">
+          <h3>Token accuracy</h3>
+          <p>
+            This measures how often the model predicts the correct next word token. It is useful, but it is not the same as full caption quality.
+          </p>
+        </div>
+        <div class="box">
+          <h3>Train/validation/test split</h3>
+          <p>
+            Training data teaches the model. Validation data helps monitor generalization. Test data gives the final held-out performance estimate.
+          </p>
+        </div>
+        <div class="box">
+          <h3>Overfitting</h3>
+          <p>
+            If training accuracy keeps improving but validation/test accuracy stops improving, the model is memorizing training captions more than generalizing.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Step 7: Checkpoints and logs</h2>
+      <p>After training, the model and logs are saved here:</p>
+      <pre><code>checkpoints/caption_model.pth
+logs/training_log.csv</code></pre>
+      <p>
+        The checkpoint stores learned model weights. The CSV log stores epoch-by-epoch training, validation, and test loss and accuracy.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Step 8: Plot loss and accuracy curves</h2>
+      <p>After training, generate plots with:</p>
+      <pre><code>python src/plot_metrics.py</code></pre>
+      <p>The plots used in this blog are placed at:</p>
+      <pre><code>assets/images/loss_curve.png
+assets/images/accuracy_curve.png</code></pre>
+      <p>
+        In GitHub Pages, the files are loaded from the blog folder using <code>assets/images/loss_curve.png</code> and <code>assets/images/accuracy_curve.png</code>.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Step 9: Recommended experiments</h2>
+      <table class="metric-table">
+        <tr>
+          <th>Experiment</th>
+          <th>Why it helps</th>
+        </tr>
+        <tr>
+          <td>Unfreeze later ResNet layers</td>
+          <td>Lets the image encoder adapt to Flickr8k images instead of using frozen ImageNet features only.</td>
+        </tr>
+        <tr>
+          <td>Use beam search instead of greedy decoding</td>
+          <td>Explores multiple caption candidates and often improves sentence quality.</td>
+        </tr>
+        <tr>
+          <td>Add BLEU and CIDEr evaluation</td>
+          <td>Token accuracy is limited. Caption metrics compare generated sentences with reference captions.</td>
+        </tr>
+        <tr>
+          <td>Use attention</td>
+          <td>Allows the decoder to focus on different image regions for different words.</td>
+        </tr>
+        <tr>
+          <td>Try a stronger encoder</td>
+          <td>ResNet50, EfficientNet, ViT, or CLIP features can produce richer visual representations.</td>
+        </tr>
+      </table>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <p><strong>Flickr8k Image Captioning Model</strong> - full training pipeline explained.</p>
+      <p><a href="results.html">Next: Results and curves</a></p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prediction - Flickr8k Image Captioning</title>
+  <meta name="description" content="How to generate captions for new images using the trained Flickr8k image captioning model.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="index.html">Home</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="training.html">Training</a>
+      <a href="results.html">Results</a>
+      <a class="active" href="predict.html">Prediction</a>
+      <a href="https://github.com/Lokendra5298/flickr8k-image-captioning-model" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </nav>
+
+  <main class="page">
+    <section class="card">
+      <h1>Generate a Caption for a New Image</h1>
+      <p class="lead">
+        After training, the model can take a single image and generate a caption word by word.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Basic prediction command</h2>
+      <p>Use the prediction script with an image path:</p>
+      <pre><code>python src/predict.py --image data/flickr8k/flickr8k/Images/1356796100_b265479721.jpg</code></pre>
+      <p>If your script supports automatic image search, you may also pass only the image filename.</p>
+      <pre><code>python src/predict.py --image 1356796100_b265479721.jpg</code></pre>
+    </section>
+
+    <section class="card">
+      <h2>What happens during prediction?</h2>
+      <ol class="steps">
+        <li>
+          <strong>Load the image.</strong><br>
+          The image is resized, normalized, and converted to a tensor.
+        </li>
+        <li>
+          <strong>Extract image features.</strong><br>
+          ResNet18 converts the image into a feature vector.
+        </li>
+        <li>
+          <strong>Initialize the LSTM.</strong><br>
+          The image feature vector is used to initialize the LSTM hidden state and cell state.
+        </li>
+        <li>
+          <strong>Start with <code>&lt;start&gt;</code>.</strong><br>
+          The decoder receives the start token and predicts the first word.
+        </li>
+        <li>
+          <strong>Repeat word by word.</strong><br>
+          The predicted word is fed back into the LSTM to predict the next word.
+        </li>
+        <li>
+          <strong>Stop at <code>&lt;end&gt;</code>.</strong><br>
+          Generation stops when the decoder predicts the end token or reaches the maximum length.
+        </li>
+      </ol>
+    </section>
+
+    <section class="card">
+      <h2>Greedy decoding explained</h2>
+      <p>
+        The current decoder uses greedy decoding. This means the model chooses the highest-probability word at every step.
+      </p>
+      <pre><code>current word: &lt;start&gt;
+model predicts probabilities for all words
+choose highest probability word: a
+
+current word: a
+choose highest probability word: man
+
+current word: man
+choose highest probability word: is
+
+repeat until &lt;end&gt;</code></pre>
+      <div class="callout warning">
+        <strong>Limitation:</strong> greedy decoding is simple and fast, but it can miss better full sentences. A word that is best now may not lead to the best complete caption.
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Example output</h2>
+      <p>For a snowy image, the model may generate:</p>
+      <pre><code>a man is standing in the snow</code></pre>
+      <p>
+        This sentence is produced one token at a time. The model does not copy it from a database; it predicts each word based on the image feature vector and the words generated so far.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>How to improve prediction quality</h2>
+      <table class="metric-table">
+        <tr>
+          <th>Method</th>
+          <th>Simple explanation</th>
+          <th>Expected result</th>
+        </tr>
+        <tr>
+          <td>Beam search</td>
+          <td>Keep several possible captions at each step instead of only one.</td>
+          <td>Usually more fluent captions.</td>
+        </tr>
+        <tr>
+          <td>Temperature sampling</td>
+          <td>Control how random the word choice is.</td>
+          <td>Can produce more diverse captions.</td>
+        </tr>
+        <tr>
+          <td>Attention</td>
+          <td>Let the decoder look at different image regions for different words.</td>
+          <td>Better object and location descriptions.</td>
+        </tr>
+        <tr>
+          <td>Better encoder</td>
+          <td>Use ResNet50, EfficientNet, ViT, or CLIP features.</td>
+          <td>Stronger image understanding.</td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Checklist before predicting</h2>
+      <ul>
+        <li>The dataset vocabulary or saved vocabulary file is available.</li>
+        <li>The checkpoint exists at <code>checkpoints/caption_model.pth</code>.</li>
+        <li>The input image path is correct.</li>
+        <li>The same preprocessing used during training is used during prediction.</li>
+        <li>The model is in evaluation mode using <code>model.eval()</code>.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <p><strong>Flickr8k Image Captioning Model</strong> - prediction explained step by step.</p>
+      <p><a href="index.html">Back to home</a></p>
+    </div>
+  </footer>
+</body>
+</html>

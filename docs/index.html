@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flickr8k Image Captioning Model</title>
+  <meta name="description" content="Beginner-friendly technical blog for a CNN-LSTM image captioning model trained on Flickr8k.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a class="active" href="index.html">Home</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="training.html">Training</a>
+      <a href="results.html">Results</a>
+      <a href="predict.html">Prediction</a>
+      <a href="https://github.com/Lokendra5298/flickr8k-image-captioning-model" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </nav>
+
+  <main class="page">
+    <section class="hero">
+      <p class="tag">Flickr8k image captioning from scratch</p>
+      <h1>Teaching a neural network to describe images in words</h1>
+      <p class="subtitle">
+        This project builds an image captioning system using a CNN encoder and an LSTM decoder.
+        The CNN understands the image. The LSTM turns that understanding into a sentence, one word at a time.
+      </p>
+      <div class="buttons">
+        <a href="architecture.html">Understand the model</a>
+        <a href="training.html">Train it yourself</a>
+        <a href="results.html">View results</a>
+        <a href="predict.html">Generate captions</a>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>What is image captioning?</h2>
+      <p class="lead">
+        Image captioning is the task of taking an image as input and producing a natural language sentence as output.
+      </p>
+      <div class="pipeline">
+        <div>Input image</div>
+        <span>--&gt;</span>
+        <div>Visual features</div>
+        <span>--&gt;</span>
+        <div>Language model</div>
+        <span>--&gt;</span>
+        <div>Generated caption</div>
+      </div>
+      <p>
+        For example, if the model sees a person standing in snow, it may generate a caption like
+        <strong>"a man is standing in the snow"</strong>. The difficult part is that the model must learn both
+        visual understanding and sentence generation.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>The complete idea in one picture</h2>
+      <img class="figure architecture" src="assets/images/architecture.png" alt="CNN encoder and LSTM decoder image captioning architecture">
+      <p class="caption">
+        CNN encoder plus LSTM decoder: image features are used to guide word-by-word caption generation.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Project in simple words</h2>
+      <div class="grid">
+        <div class="box blue">
+          <h3>1. The image side</h3>
+          <p>
+            A pretrained ResNet18 CNN reads the image and converts it into a 512-dimensional visual feature vector.
+            The final ImageNet classification layer is removed because we do not want class labels; we want image features.
+          </p>
+        </div>
+        <div class="box purple">
+          <h3>2. The text side</h3>
+          <p>
+            Each caption is converted into tokens such as <code>&lt;start&gt;</code>, normal words, and <code>&lt;end&gt;</code>.
+            The LSTM learns how captions flow from one word to the next.
+          </p>
+        </div>
+        <div class="box green">
+          <h3>3. The connection</h3>
+          <p>
+            The image feature vector initializes the LSTM hidden state. This means the first word and all later words are
+            generated while remembering what the image contains.
+          </p>
+        </div>
+        <div class="box orange">
+          <h3>4. The output</h3>
+          <p>
+            At every step, the model predicts a probability distribution over the vocabulary. The word with the highest
+            probability can be selected during inference.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>What dataset is used?</h2>
+      <p>
+        The model is trained on the Flickr8k dataset. It contains thousands of real-world images, and each image has
+        human-written captions. The project expects the dataset in this structure:
+      </p>
+      <pre><code>data/flickr8k/flickr8k/
+├── Images/
+└── captions.txt</code></pre>
+      <p>
+        During training, each image-caption pair becomes a supervised example: the image is the input, and the caption is
+        the target sentence the model tries to learn.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>What this blog covers</h2>
+      <div class="grid three">
+        <div class="box">
+          <h3>Architecture</h3>
+          <p>ResNet18 encoder, feature projection, word embedding, LSTM decoder, linear classifier, and greedy decoding.</p>
+          <a href="architecture.html">Read architecture</a>
+        </div>
+        <div class="box">
+          <h3>Training</h3>
+          <p>Dataset download, path setup, vocabulary creation, loss function, checkpoints, logs, and plotting curves.</p>
+          <a href="training.html">Read training guide</a>
+        </div>
+        <div class="box">
+          <h3>Results</h3>
+          <p>Loss and token accuracy curves, final metrics, overfitting interpretation, and improvement ideas.</p>
+          <a href="results.html">Read results</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Quick start</h2>
+      <p>Clone the project, install dependencies, download the dataset, and train.</p>
+      <pre><code>git clone https://github.com/Lokendra5298/flickr8k-image-captioning-model.git
+cd flickr8k-image-captioning-model
+pip install -r requirements.txt
+python src/download_dataset.py
+python src/train.py</code></pre>
+      <p class="muted">
+        After training, the checkpoint is saved at <code>checkpoints/caption_model.pth</code> and the training log is saved at
+        <code>logs/training_log.csv</code>.
+      </p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <p><strong>Flickr8k Image Captioning Model</strong> - CNN encoder plus LSTM decoder in PyTorch.</p>
+      <p>Created by <strong>Lokendra Kumar</strong> | <a href="https://github.com/Lokendra5298/flickr8k-image-captioning-model" target="_blank" rel="noopener noreferrer">GitHub Repository</a></p>
+    </div>
+  </footer>
+</body>
+</html>

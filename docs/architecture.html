@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture - Flickr8k Image Captioning</title>
+  <meta name="description" content="Easy but technical explanation of the CNN encoder and LSTM decoder architecture.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="index.html">Home</a>
+      <a class="active" href="architecture.html">Architecture</a>
+      <a href="training.html">Training</a>
+      <a href="results.html">Results</a>
+      <a href="predict.html">Prediction</a>
+      <a href="https://github.com/Lokendra5298/flickr8k-image-captioning-model" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </nav>
+
+  <main class="page">
+    <section class="card">
+      <h1>Model Architecture</h1>
+      <p class="lead">
+        The model has two main parts: a CNN encoder that understands the image, and an LSTM decoder that writes the caption.
+      </p>
+      <div class="pipeline">
+        <div>Image</div>
+        <span>--&gt;</span>
+        <div>ResNet18 CNN encoder</div>
+        <span>--&gt;</span>
+        <div>Feature vector</div>
+        <span>--&gt;</span>
+        <div>LSTM decoder</div>
+        <span>--&gt;</span>
+        <div>Caption</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Architecture diagram</h2>
+      <img class="figure architecture" src="assets/images/architecture.png" alt="CNN encoder and LSTM decoder architecture for image captioning">
+      <p class="caption">
+        The CNN extracts visual features. The LSTM uses those features and previous words to predict the next word.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Part 1: CNN Encoder</h2>
+      <p>
+        The encoder answers one question: <strong>what is inside the image?</strong> Instead of generating words directly,
+        it converts the image into numbers that summarize the important visual information.
+      </p>
+      <div class="flow-line">
+        <div>RGB image<br>3 x 224 x 224</div>
+        <span>--&gt;</span>
+        <div>ResNet18 convolution layers</div>
+        <span>--&gt;</span>
+        <div>Global average pooling</div>
+        <span>--&gt;</span>
+        <div>512-D feature vector</div>
+        <span>--&gt;</span>
+        <div>Projected embedding</div>
+      </div>
+
+      <h3>What happens inside the encoder?</h3>
+      <ol class="steps">
+        <li>
+          <strong>The input image is resized and normalized.</strong><br>
+          The model expects a tensor shaped like <code>[batch_size, 3, 224, 224]</code>, where 3 means RGB channels.
+        </li>
+        <li>
+          <strong>ResNet18 extracts visual patterns.</strong><br>
+          Early convolution layers detect simple edges and colors. Deeper layers detect object parts, scenes, and shapes.
+        </li>
+        <li>
+          <strong>The final classification layer is removed.</strong><br>
+          ResNet18 normally predicts ImageNet classes. Here, we do not need class names. We only need visual features.
+        </li>
+        <li>
+          <strong>The ResNet weights are frozen.</strong><br>
+          Frozen means the pretrained CNN is used as a feature extractor and its parameters are not updated during training.
+          This makes training faster and safer on a small dataset.
+        </li>
+        <li>
+          <strong>A linear layer maps features to the caption embedding size.</strong><br>
+          The 512-D ResNet output is passed through a fully connected layer, ReLU, and dropout before going to the decoder.
+        </li>
+      </ol>
+
+      <div class="callout good">
+        <strong>Simple meaning:</strong> the encoder turns a picture into a compact visual memory that the decoder can use while writing the caption.
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Part 2: Word Embedding Layer</h2>
+      <p>
+        Neural networks cannot directly understand words like <em>man</em>, <em>dog</em>, or <em>snow</em>. So every word is converted into a number ID,
+        and then that ID is converted into a dense vector using an embedding layer.
+      </p>
+      <div class="flow-line">
+        <div>Word ID</div>
+        <span>--&gt;</span>
+        <div>Embedding lookup</div>
+        <span>--&gt;</span>
+        <div>Word vector</div>
+      </div>
+      <p>
+        For example, the caption may be represented like this during training:
+      </p>
+      <pre><code>&lt;start&gt; a man is standing in the snow &lt;end&gt;</code></pre>
+      <p>
+        During training, the decoder sees previous words and learns to predict the next word.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Part 3: LSTM Decoder</h2>
+      <p>
+        The decoder answers this question: <strong>given the image and the previous words, what word should come next?</strong>
+      </p>
+      <div class="flow-line">
+        <div>Image feature</div>
+        <span>+</span>
+        <div>Previous words</div>
+        <span>--&gt;</span>
+        <div>LSTM</div>
+        <span>--&gt;</span>
+        <div>Linear layer</div>
+        <span>--&gt;</span>
+        <div>Vocabulary probabilities</div>
+      </div>
+
+      <h3>How the image enters the LSTM</h3>
+      <p>
+        In this implementation, the image feature vector is used to initialize the LSTM hidden state and cell state.
+        This is important because the LSTM starts sentence generation with memory of the image.
+      </p>
+      <pre><code>image_features --&gt; init_h --&gt; initial hidden state
+image_features --&gt; init_c --&gt; initial cell state</code></pre>
+
+      <h3>What the LSTM learns</h3>
+      <ul>
+        <li>Common caption patterns, such as <code>a man is</code> or <code>a dog is running</code>.</li>
+        <li>Which words usually follow other words.</li>
+        <li>How to condition sentence generation on the visual feature vector.</li>
+        <li>When to stop by predicting the <code>&lt;end&gt;</code> token.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Part 4: Linear layer and softmax</h2>
+      <p>
+        The LSTM output is not a word yet. It is a hidden vector. A final linear layer converts this hidden vector into
+        one score for every word in the vocabulary.
+      </p>
+      <pre><code>LSTM hidden vector --&gt; Linear(hidden_size, vocab_size) --&gt; word scores</code></pre>
+      <p>
+        During training, cross-entropy loss compares these scores with the correct next word. During prediction, the model
+        chooses a word from these scores, usually the highest-scoring word in greedy decoding.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Training mode vs prediction mode</h2>
+      <table class="metric-table">
+        <tr>
+          <th>Mode</th>
+          <th>What the model receives</th>
+          <th>What the model does</th>
+        </tr>
+        <tr>
+          <td><strong>Training</strong></td>
+          <td>Image plus the correct caption tokens</td>
+          <td>Learns to predict the next correct word at each position.</td>
+        </tr>
+        <tr>
+          <td><strong>Prediction</strong></td>
+          <td>Image plus only the <code>&lt;start&gt;</code> token</td>
+          <td>Generates one word, feeds it back, then repeats until <code>&lt;end&gt;</code> or max length.</td>
+        </tr>
+      </table>
+      <div class="callout warning">
+        <strong>Important:</strong> a model can have good token accuracy but still generate imperfect captions. Captioning quality is usually better judged with examples and caption metrics such as BLEU, METEOR, ROUGE, CIDEr, or SPICE.
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Code-level summary</h2>
+      <table class="metric-table">
+        <tr>
+          <th>Class</th>
+          <th>Purpose</th>
+          <th>Main operations</th>
+        </tr>
+        <tr>
+          <td><code>EncoderCNN</code></td>
+          <td>Convert image to feature vector</td>
+          <td>Pretrained ResNet18, remove final layer, freeze CNN, linear projection, ReLU, dropout</td>
+        </tr>
+        <tr>
+          <td><code>DecoderRNN</code></td>
+          <td>Generate caption tokens</td>
+          <td>Embedding layer, LSTM, hidden and cell initialization from image features, final linear layer</td>
+        </tr>
+        <tr>
+          <td><code>ImageCaptioningModel</code></td>
+          <td>End-to-end wrapper</td>
+          <td>Runs encoder first, then sends image features and captions to decoder</td>
+        </tr>
+      </table>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <p><strong>Flickr8k Image Captioning Model</strong> - architecture explained step by step.</p>
+      <p><a href="training.html">Next: Training guide</a></p>
+    </div>
+  </footer>
+</body>
+</html>
